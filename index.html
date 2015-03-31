@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+        <title>[ ] [ ] [ ]</title>
+        <script src="jquery.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <link rel="stylesheet" type="text/css" href="icons.css">
+    </head>
+    <body>
+        <div id="main">
+            <div id="ctl">
+                <span class="icon-refresh ctl-icon" id="refresh"></span>
+            </div>
+            <div id="dynamic">
+                <svg version="1.1" x="0px" y="0px" xml:space="preserve" id="canvas"></svg>
+            </div>
+        </div>
+        <script>
+            function rando(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+            
+            var line = 0;
+            var total = 0;
+            var hasColor = false;
+            var isRotated = false;
+            
+            function fillWindow() {
+                height = $(window).height();
+                width = $(window).width();
+                numX = Math.floor(width);                
+                overage = numX % 10;
+                numX = numX - overage;
+                numX = numX / 10;
+                numY = Math.floor(height / 10);
+
+                
+                console.log(numX);
+                console.log(numY);
+                
+                /*
+                for(var id = 0; id <= numX; id++) {
+                    x = 10*id;
+                    stuff = '<rect id="id' + id + '" x="' + x + '" y="' + y + '" fill="#000" width="10" height="10"/>';
+                    $("#canvas").append(stuff);
+                }
+                */
+                
+                id = 0;
+                for(var j = 0; j <= numY; j++) {
+                    if(j === 1) {
+                        line = id;
+                    }
+                    for(var i = 0; i <= numX; i++) {
+                        stuff = '<rect id="id' + id + '" x="' + (i*10) + '" y="' + (j*10) + '" fill="#ffffff" width="10px" height="10px"/>';
+                        $("#canvas").append(stuff);
+                        id++;
+                    }
+                }
+                
+                total = id;
+                
+                $("#dynamic").html($("#dynamic").html());
+            }
+            
+            function stripId(obj) {
+                return obj[0].getAttribute('id').replace('id', '');
+            }
+            
+            function makeObj(id) {
+                return $("#id" + id);
+            }
+            
+            /*
+            function neighbors(id) {
+                id = parseInt(id);
+                if(id % 20 === 0) {
+                    return [id - 40, id - 20, id + 20, id + 40, id + 20 - 1, id - 1, id - 2, id - 20 - 1];
+                } else if((id - 1) % 20 === 0) {
+                    return [id - 40, id - 20, id - 20 + 1, id + 1, id + 2, id + 20 + 1, id + 20, id + 40];
+                } else if((id + 1) % 20 === 0) {
+                    return [id - 40, id - 20, id - 20 + 1, id + 1, id + 20 + 1, id + 20, id + 40, id + 20 - 1, id - 1, id - 2, id - 20 - 1];
+                } else if((id - 2) % 20 === 0) {
+                    return [id - 40, id - 20, id - 20 + 1, id + 1, id + 2, id + 20 + 1, id + 20, id + 40, id + 20 - 1, id - 1, id - 20 - 1];
+                } else {
+                    return [id - 40, id - 20, id - 20 + 1, id + 1, id + 2, id + 20 + 1, id + 20, id + 40, id + 20 - 1, id - 1, id - 2, id - 20 - 1];
+                }
+            }
+            */
+            
+            function getNeighbors(id) {
+                id = parseInt(id);
+                up = id + line;
+                upup = up + line;
+                down = id - line;
+                downdown = down - line;
+                return [upup, up - 1, up, up + 1, id - 2, id - 1, id + 1, id + 2, down - 1, down, down + 1, downdown]
+            }
+            
+            function timer(thing, style, value, time) {
+                setTimeout(function() {
+                    thing.css(style, value);
+                }, time);
+            }
+            
+            // var palette = ["#ebebeb", "#f6c2c1", "#e2f2d2", "#d4ecf4", "#cccccc"];
+            
+            var palette = ["#ebebeb", "#f4716e", "#acf465", "#55ccf4", "#938d8d"];
+            
+            function colorNeighbors(neighbors) {
+                for(var x = 0; x < neighbors.length; x++) {
+                    if(hasColor) {
+                        if(rando(0,1)) {
+                            timer(makeObj(neighbors[x]), "fill", palette[rando(0,4)], rando(100,500));
+                        }
+                    }
+                }
+            }
+            
+            function explode(neighbors) {
+                for(var y = 0; y < 25; y++) {
+                    for(var x = 0; x < neighbors.length; x++) {
+                        if(rando(0,1)) {
+                            timer(makeObj(neighbors[x]), "fill", palette[rando(0,4)], rando(0,100));
+                        }
+                    }
+                    neighbors = getNeighbors(neighbors[rando(0, neighbors.length - 1)]);
+                }
+            }
+            
+            function purge() {
+                if(isRotated) {
+                    $("#refresh").css("transform", "rotate(0deg)");
+                } else {
+                    $("#refresh").css("transform", "rotate(360deg)");
+                }
+                isRotated = !isRotated;
+                for(var x = 0; x <= total; x++) {
+                    makeObj(x).css("fill", "#fff");
+                }
+            }
+            
+            $(document).ready(function() {
+                
+                fillWindow();
+                
+                $('rect').hover(function() {
+                    if(hasColor) {
+                        $(this).css("fill", "#fff");
+                    }
+                    id = stripId($(this));
+                    colorNeighbors(getNeighbors(id));
+                });
+                
+                document.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    if(e.touches.length > 1) {
+                        hasColor = !hasColor;
+                    } else {
+                        x = e.changedTouches[0].pageX;
+                        y = e.changedTouches[0].pageY;
+                        id = document.elementFromPoint(x,y).id.replace('id', '');
+                        if(id === "refresh") {
+                            purge();
+                        } else {
+                            colorNeighbors(getNeighbors(id));
+                        }
+                    }
+                }, false);
+
+                document.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                    if(e.touches.length === 1) {
+                        x = e.targetTouches[0].pageX;
+                        y = e.targetTouches[0].pageY;
+                        id = document.elementFromPoint(x,y).id.replace('id', '');
+                        if(id === "refresh") {
+                            purge();
+                        } else {
+                            colorNeighbors(getNeighbors(id));
+                        }
+                    }
+                }, false);
+                
+                $('rect').click(function() {
+                    id = stripId($(this));
+                    explode(getNeighbors(id));
+                });
+                
+                $('#refresh').click(function() {
+                    purge();
+                });
+                
+                $(window).keydown(function(e) {
+                    e.shiftKey === 1;
+                    hasColor = true;
+                });
+                
+                 $(window).keyup(function(e) {
+                    e.shiftKey === 1;
+                    hasColor = false;
+                });
+                    
+            });
+        </script>
+    </body>
