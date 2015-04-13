@@ -14,6 +14,8 @@
         <div id="main">
             <div id="ctl">
                 <span class="icon-refresh ctl-icon" id="refresh"></span>
+                <span class="icon-paintbrush ctl-icon blue" id="paint"></span>
+                <span class="icon-pencil ctl-icon gray" id="pencil"></span>
             </div>
             <div id="dynamic">
                 <svg version="1.1" x="0px" y="0px" xml:space="preserve" id="canvas"></svg>
@@ -27,16 +29,18 @@
             var line = 0;
             var total = 0;
             var hasColor = false;
-            var isRotated = false;
+            var hasClear = false;
+            var isRefreshRotated = false;
+            var isPaintRotated = false;
             
             function fillWindow() {
                 height = $(window).height();
                 width = $(window).width();
                 numX = Math.floor(width);                
-                overage = numX % 10;
+                overage = numX % 7;
                 numX = numX - overage;
-                numX = numX / 10;
-                numY = Math.floor(height / 10);
+                numX = numX / 7;
+                numY = Math.floor(height / 7);
 
                 
                 console.log(numX);
@@ -56,7 +60,7 @@
                         line = id;
                     }
                     for(var i = 0; i <= numX; i++) {
-                        stuff = '<rect id="id' + id + '" x="' + (i*10) + '" y="' + (j*10) + '" fill="#ffffff" width="10px" height="10px"/>';
+                        stuff = '<rect id="id' + id + '" x="' + (i*7) + '" y="' + (j*7) + '" fill="#ffffff" width="7px" height="7px"/>';
                         $("#canvas").append(stuff);
                         id++;
                     }
@@ -101,15 +105,27 @@
                 return [upup, up - 1, up, up + 1, id - 2, id - 1, id + 1, id + 2, down - 1, down, down + 1, downdown]
             }
             
+            function getBigNeighbors(id) {
+                id = parseInt(id);
+                up = id + 2*line;
+                upup = up + 2*line;
+                down = id - 2*line;
+                downdown = down - 2*line;
+                return [upup, up - 5, up, up + 5, id - 7, id - 5, id + 5, id + 7, down - 5, down, down + 5, downdown]
+            }
+            
             function timer(thing, style, value, time) {
                 setTimeout(function() {
                     thing.css(style, value);
                 }, time);
             }
             
-            // var palette = ["#ebebeb", "#f6c2c1", "#e2f2d2", "#d4ecf4", "#cccccc"];
+            //var palette = ["#ebebeb", "#f6c2c1", "#e2f2d2", "#d4ecf4", "#cccccc"];
             
-            var palette = ["#ebebeb", "#f4716e", "#acf465", "#55ccf4", "#938d8d"];
+            var paletteColor = ["#ebebeb", "#f4716e", "#acf465", "#55ccf4", "#938d8d"];
+            var paletteBlack = ["#000", "#434343", "#6d6d6d", "#adadad", "#cbcbcb"];
+            
+            var palette = paletteColor;
             
             function colorNeighbors(neighbors) {
                 for(var x = 0; x < neighbors.length; x++) {
@@ -117,33 +133,53 @@
                         if(rando(0,1)) {
                             timer(makeObj(neighbors[x]), "fill", palette[rando(0,4)], rando(100,500));
                         }
+                    } else if(hasClear) {
+                        timer(makeObj(neighbors[x]), "fill", "#fff", 0);
                     }
                 }
             }
             
             function explode(neighbors) {
-                for(var y = 0; y < 25; y++) {
+                for(var y = 0; y < 7; y++) {
                     for(var x = 0; x < neighbors.length; x++) {
                         if(rando(0,1)) {
-                            timer(makeObj(neighbors[x]), "fill", palette[rando(0,4)], rando(0,100));
+                            timer(makeObj(neighbors[x]), "fill", palette[rando(0,4)], rando(0,200));
+                            timer(makeObj(neighbors[x]), "fill", "#fff", rando(200,500));
                         }
                     }
-                    neighbors = getNeighbors(neighbors[rando(0, neighbors.length - 1)]);
+                    neighbors = getBigNeighbors(neighbors[rando(0, neighbors.length - 1)]);
                 }
             }
             
             function purge() {
-                if(isRotated) {
+                if(isRefreshRotated) {
                     $("#refresh").css("transform", "rotate(0deg)");
                 } else {
                     $("#refresh").css("transform", "rotate(360deg)");
                 }
-                isRotated = !isRotated;
+                isRefreshRotated = !isRefreshRotated;
                 for(var x = 0; x <= total; x++) {
-                    makeObj(x).css("fill", "#fff");
+                    timer(makeObj(x), "fill", "#fff", rando(0,1000));
                 }
             }
             
+            function changeColor() {
+                if(isPaintRotated) {
+                    $("#paint").css("transform", "rotate(0deg)");
+                } else {
+                    $("#paint").css("transform", "rotate(360deg)");
+                }
+                isPaintRotated = !isPaintRotated;
+                
+                $("#paint").toggleClass('blue');
+                
+                if(palette[0] !== "#000") {
+                    palette = paletteBlack;
+                } else {
+                    palette = paletteColor;
+                }
+            }
+                
             $(document).ready(function() {
                 
                 fillWindow();
@@ -188,23 +224,44 @@
                 
                 $('rect').click(function() {
                     id = stripId($(this));
-                    explode(getNeighbors(id));
+                    explode(getBigNeighbors(id));
                 });
                 
                 $('#refresh').click(function() {
                     purge();
                 });
                 
+                $('#paint').click(function() {
+                    changeColor();
+                });
+                
+                $('#pencil').click(function() {
+                    hasColor = !hasColor;
+                    $(this).toggleClass('gray');
+                });
+                
                 $(window).keydown(function(e) {
-                    e.shiftKey === 1;
-                    hasColor = true;
+                    if(e.keyCode === 16) {
+                        hasColor = true;
+                        $("#pencil").addClass('black');
+                        $("#pencil").removeClass('gray');
+                    } else if(e.keyCode === 18) {
+                        hasClear = true;
+                    } else if(e.keyCode === 27) {
+                        purge();
+                    } else if(e.keyCode === 17) {
+                        changeColor();
+                    }
                 });
                 
                  $(window).keyup(function(e) {
-                    e.shiftKey === 1;
                     hasColor = false;
+                    hasClear = false;
+                    if(e.keyCode === 16) {
+                        $("#pencil").addClass('gray');
+                        $("#pencil").removeClass('black');
+                    }
                 });
-                    
             });
         </script>
     </body>
